@@ -1,0 +1,142 @@
+<?php
+/**
+ * Implements hook_ctools_plugin_directory
+ */
+function dynamic_term_pages_ctools_plugin_directory($module, $plugin) {
+  // we'll be nice and limit scandir() calls
+  if (in_array($module, array('ctools', 'page_manager'))) {
+    return "plugins/$plugin";
+  }
+}
+
+/**
+ * Implements hook_taxonomy_term_insert().
+ */
+function dynamic_term_pages_taxonomy_term_insert($term) {
+  dynamic_term_pages_pathauto_name_save($term);
+}
+
+/**
+ * Implements hook_taxonomy_term_insert().
+ */
+function dynamic_term_pages_taxonomy_term_update($term) {
+  dynamic_term_pages_pathauto_name_save($term);
+}
+
+/**
+ * Implements hook_taxonomy_term_delete().
+ */
+function dynamic_term_pages_taxonomy_term_delete($term) {
+  if (module_exists('pathauto')) {
+    db_delete('dynamic_term_pathauto_name')->condition('tid', $term->tid)->execute();
+  }
+}
+
+/**
+ * Save the pathauto cleaned term name so that we can use it to find our term id
+ * Only save a cleaned name if pathauto is actually enabled
+ * @param $term - the term object
+ * @return bool
+ */
+function dynamic_term_pages_pathauto_name_save($term) {
+  if (module_exists('pathauto')) {
+    include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
+
+    // We use tid as a unique key, so do a on duplicate key update
+    db_merge('dynamic_term_pathauto_name')
+      ->key(array('tid' => $term->tid))
+      ->fields(array(
+        'tid' => $term->tid,
+        'pathauto_name' => pathauto_cleanstring(check_plain($term->name))
+    ))->execute();
+  }
+}
+
+/**
+ * Implements hook_taxonomy_term_load().
+ */
+function dynamic_term_pages_taxonomy_term_load($terms) {
+  $result = db_select('dynamic_term_pathauto_name', 'dtp')->fields('dtp', array('tid', 'pathauto_name'))->condition('dtp.tid', array_keys($terms), 'IN')
+    ->execute();
+  foreach ($result as $record) {
+    $terms[$record->tid]->pathauto_name = $record->pathauto_name;
+  }
+}
+
+
+/**
+ * Lookup pathauto term name in database
+ * @param $name
+ * @return $tid
+ */
+function dynamic_term_pages_pathauto_name_load($name) {
+  if (module_exists('pathauto')) {
+    $result = db_select('dynamic_term_pathauto_name', 'dtp')
+      ->fields('dtp')
+      ->condition('pathauto_name', $name)
+      ->execute()
+      ->fetchAssoc();
+
+    if ($result) {
+      return $result['tid'];
+    }
+
+    return FALSE;
+  }
+  else {
+    return $name;
+  }
+}
+
+/**
+ * Implements hook_url_inbound_alter
+ */
+function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_language) {
+  if (variable_get('dynamic_term_pages_view_disabled', TRUE)) {
+    return;
+  }
+  // Check if path already exists, if it doesn't, check for a term in first level and redirect to our panel
+  $exists = drupal_lookup_path('source', $original_path);
+
+  // This will only run for paths that have no url_alias
+  $parts = explode('/', $original_path);
+  if (!$exists && $parts[0] != 'admin') {
+    // Try to load a term
+    if (dynamic_term_pages_term_load($parts[0])) {
+      $path = 'dtp/' . $original_path;
+    }
+  }
+}
+
+/**
+ * Custom wildcard menu loader
+ * @param $term_name
+ * @return object|bool
+ */
+function dynamic_term_pages_term_load($term_name) {
+  if (module_exists('pathauto')) {
+    // Look for argument in saved clean data
+    $tid = dynamic_term_pages_pathauto_name_load($term_name);
+
+    if ($tid) {
+      // Then try and load the term
+      $term = taxonomy_term_load($tid);
+
+      if (!empty($term)) {
+        return $term;
+      }
+    }
+  }
+
+  // Fallback, look up term by name
+  $term = taxonomy_get_term_by_name($term_name);
+
+  if ($term) {
+    // taxonomy_get_term_by_name returns an array keyed by tid
+    $term = reset($term);
+
+    return $term;
+  }
+
+  return FALSE;
+}
