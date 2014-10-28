@@ -95,16 +95,33 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
   if (variable_get('dynamic_term_pages_view_disabled', TRUE)) {
     return;
   }
+
+  $override = FALSE;
+
   // Check if path already exists, if it doesn't, check for a term in first level and redirect to our panel
   $exists = drupal_lookup_path('source', $original_path);
 
-  // This will only run for paths that have no url_alias
-  $parts = explode('/', $original_path);
+  // Only give access to urls with no alias that are not admin page, or if taxonomy term page override is enabled to taxonomy pages that are not edit pages
+  $parts = explode('/', $path);
+  $o_parts = explode('/', $original_path);
+
   if (!$exists && $parts[0] != 'admin') {
-    // Try to load a term
-    if (dynamic_term_pages_term_load($parts[0])) {
-      $path = 'dtp/' . $original_path;
+    if (dynamic_term_pages_term_load($o_parts[0])) {
+      $override = TRUE;
     }
+  }
+  elseif (variable_get('dynamic_term_pages_override_taxonomy_term_page', FALSE) && $parts[0] == 'taxonomy' && !isset($parts[3])) {
+    if ($term = dynamic_term_pages_term_load($o_parts[0])) {
+      // Check if term is a in enabled taxonomies for dynamic term pages
+      $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
+      if (in_array($term->vocabulary_machine_name, array_keys($enabled))) {
+        $override = TRUE;
+      }
+    }
+  }
+
+  if ($override) {
+    $path = 'dtp/' . $original_path;
   }
 }
 

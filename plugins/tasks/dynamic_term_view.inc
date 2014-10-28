@@ -14,33 +14,26 @@ function dynamic_term_pages_dynamic_term_view_page_manager_tasks() {
     return array(
       // This is a 'page' task and will fall under the page admin UI
       'task type' => 'page',
-
       'title' => t('Dynamic taxonomy term template'),
       'admin title' => t('Dynamic taxonomy term template'),
       'admin description' => t('Override dynamic path'),
       'admin path' => 'dtp/%/%',
-
       // Menu hooks so that we can alter the term/%term menu entry to point to us.
       'hook menu' => 'dynamic_term_pages_view_menu',
       'hook menu alter' => 'dynamic_term_pages_view_menu_alter',
-
       // Provide a setting to the primary settings UI for Panels
       'admin settings' => 'dynamic_term_pages_view_admin_settings',
       // Even though we don't have subtasks, this allows us to save our settings.
       'save subtask callback' => 'dynamic_term_pages_view_save',
-
       // Callback to add items to the page manager task administration form:
       'task admin' => 'dynamic_term_pages_view_task_admin',
-
       // This is task uses 'context' handlers and must implement these to give the
       // handler data it needs.
       'handler type' => 'context',
       'get arguments' => 'dynamic_term_pages_view_get_arguments',
-
       // Allow this to be enabled or disabled:
       'disabled' => variable_get('dynamic_term_pages_view_disabled', TRUE),
       'enable callback' => 'dynamic_term_pages_view_enable',
-
       // Allow additional operations
       'operations' => array(
         'settings' => array(
@@ -129,12 +122,13 @@ function dynamic_term_pages_view_page() {
   }
   $canonical_url = $base_url . '/' . implode('/', $parts);
   drupal_add_html_head(array(
-    '#tag' => 'link',
-    '#attributes' => array(
-      'href' => $canonical_url,
-      'rel' => 'canonical',
-    )),
-  'dynamic_term_canonical');
+      '#tag' => 'link',
+      '#attributes' => array(
+        'href' => $canonical_url,
+        'rel' => 'canonical',
+      )
+    ),
+    'dynamic_term_canonical');
 
   $contexts = ctools_context_handler_get_task_contexts($task, '', $ordered_args);
 
@@ -186,6 +180,7 @@ function dynamic_term_pages_view_get_arguments($task, $subtask_id) {
 function dynamic_term_pages_view_settings($form, &$form_state) {
   $form['dynamic_term_pages_enabled_vocabularies']['#tree'] = TRUE;
   $enabled = dynamic_term_pages_get_enabled_vocabularies();
+  $override_term_page = dynamic_term_pages_override_taxonomy_term_page();
 
   $vocabularies = taxonomy_get_vocabularies();
   foreach ($vocabularies as $vocab) {
@@ -204,6 +199,13 @@ function dynamic_term_pages_view_settings($form, &$form_state) {
       '#default_value' => isset($enabled[$vocab->machine_name]) ? $enabled[$vocab->machine_name]['weight'] : '0',
     );
   }
+
+  $form['dynamic_term_pages_override_taxonomy_term_page'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Override term page.'),
+    '#description' => t('If enabled the dynamic term page will take over taxonomy/term/% for all enabled vocabulary term pages.'),
+    '#default_value' => $override_term_page
+  );
 
   $settings = isset($form_state->update_values) ? $form_state->update_values : array();
   return dynamic_term_pages_view_admin_settings($form, $settings);
@@ -236,6 +238,7 @@ function dynamic_term_pages_view_save($subtask, $cache) {
     });
 
     variable_set('dynamic_term_pages_enabled_vocabularies', $filtered);
+    variable_set('dynamic_term_pages_override_taxonomy_term_page', $cache->update_values['dynamic_term_pages_override_taxonomy_term_page']);
   }
 }
 
@@ -260,3 +263,9 @@ function dynamic_term_pages_get_enabled_vocabularies() {
   return variable_get('dynamic_term_pages_enabled_vocabularies', array());
 }
 
+/**
+ * Get enable vocabularies for this page.
+ */
+function dynamic_term_pages_override_taxonomy_term_page() {
+  return variable_get('dynamic_term_pages_override_taxonomy_term_page', FALSE);
+}
