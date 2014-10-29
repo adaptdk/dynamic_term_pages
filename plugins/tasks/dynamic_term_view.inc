@@ -69,7 +69,7 @@ function dynamic_term_pages_view_menu_alter(&$items, $task) {
       'title' => 'Dynamic term page',
       'page callback' => 'dynamic_term_pages_view_page',
       'access callback' => 'user_access',
-      'access arguments' => array('content access'),
+      'access arguments' => array('access content'),
       'file path' => $task['path'],
       'file' => $task['file'],
       'page arguments' => $args
