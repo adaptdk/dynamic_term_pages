@@ -27,9 +27,7 @@ function dynamic_term_pages_taxonomy_term_update($term) {
  * Implements hook_taxonomy_term_delete().
  */
 function dynamic_term_pages_taxonomy_term_delete($term) {
-  if (module_exists('pathauto')) {
-    db_delete('dynamic_term_pathauto_name')->condition('tid', $term->tid)->execute();
-  }
+  db_delete('dynamic_term_pathauto_name')->condition('tid', $term->tid)->execute();
 }
 
 /**
@@ -39,17 +37,15 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
  * @return bool
  */
 function dynamic_term_pages_pathauto_name_save($term) {
-  if (module_exists('pathauto')) {
-    include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
+  include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
 
     // We use tid as a unique key, so do a on duplicate key update
-    db_merge('dynamic_term_pathauto_name')
-      ->key(array('tid' => $term->tid))
-      ->fields(array(
-        'tid' => $term->tid,
-        'pathauto_name' => pathauto_cleanstring(check_plain($term->name))
+  db_merge('dynamic_term_pathauto_name')
+    ->key(array('tid' => $term->tid))
+    ->fields(array(
+      'tid' => $term->tid,
+      'pathauto_name' => pathauto_cleanstring(check_plain($term->name))
     ))->execute();
-  }
 }
 
 /**
@@ -70,22 +66,17 @@ function dynamic_term_pages_taxonomy_term_load($terms) {
  * @return $tid
  */
 function dynamic_term_pages_pathauto_name_load($name) {
-  if (module_exists('pathauto')) {
-    $result = db_select('dynamic_term_pathauto_name', 'dtp')
-      ->fields('dtp')
-      ->condition('pathauto_name', $name)
-      ->execute()
-      ->fetchAssoc();
+  $result = db_select('dynamic_term_pathauto_name', 'dtp')
+    ->fields('dtp')
+    ->condition('pathauto_name', $name)
+    ->execute()
+    ->fetchAssoc();
 
-    if ($result) {
-      return $result['tid'];
-    }
+  if ($result) {
+    return $result['tid'];
+  }
 
-    return FALSE;
-  }
-  else {
-    return $name;
-  }
+  return FALSE;
 }
 
 /**
@@ -131,17 +122,15 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
  * @return object|bool
  */
 function dynamic_term_pages_term_load($term_name) {
-  if (module_exists('pathauto')) {
-    // Look for argument in saved clean data
-    $tid = dynamic_term_pages_pathauto_name_load($term_name);
+  // Look for argument in saved clean data
+  $tid = dynamic_term_pages_pathauto_name_load($term_name);
 
-    if ($tid) {
-      // Then try and load the term
-      $term = taxonomy_term_load($tid);
+  if ($tid) {
+    // Then try and load the term
+    $term = taxonomy_term_load($tid);
 
-      if (!empty($term)) {
-        return $term;
-      }
+    if (!empty($term)) {
+      return $term;
     }
   }
 

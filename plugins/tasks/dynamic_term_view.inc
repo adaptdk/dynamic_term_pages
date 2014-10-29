@@ -113,12 +113,8 @@ function dynamic_term_pages_view_page() {
   global $base_url;
   $parts = array();
   foreach ($ordered_args as $oarg) {
-    if (module_exists('pathauto')) {
-      $parts[] = $oarg->pathauto_name;
-    }
-    else {
-      $parts[] = $oarg->name;
-    }
+    // pathauto_name property gets attached in hook_taxonomy_term_load().
+    $parts[] = $oarg->pathauto_name;
   }
   $canonical_url = $base_url . '/' . implode('/', $parts);
   drupal_add_html_head(array(
