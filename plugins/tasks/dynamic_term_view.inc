@@ -137,7 +137,7 @@ function dynamic_term_pages_view_page() {
   }
 
   // Build the full output using the configured CTools plugin.
-  $output = ctools_context_handler_render($task, '', $contexts, array($args[0]->tid));
+  $output = ctools_context_handler_render($task, '', $contexts, array('terms' => $args));
   if ($output !== FALSE) {
     return $output;
   }
