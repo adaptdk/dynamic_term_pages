@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Implements hook_schema().
+ */
 function dynamic_term_pages_schema() {
   $schema = array();
 
@@ -16,15 +19,13 @@ function dynamic_term_pages_schema() {
 }
 
 /**
- * Add dynamic_term_pathauto_name table and generate references for already existing terms
- * Might be a heavy operation depending on the number of terms on the site
- * @param type $sandbox
+ * Implements hook_install().
+ *
+ * Add dynamic_term_pathauto_name table and generate references for already
+ * existing terms. Might be a heavy operation depending on the number of terms
+ * on the site
  */
-function dynamic_term_pages_update_7000(&$sandbox) {
-  $table = 'dynamic_term_pathauto_name';
-  $schema = drupal_get_schema_unprocessed('dynamic_term_pages', $table);
-  db_create_table($table, $schema);
-
+function dynamic_term_pages_install() {
   // Look for existing terms and save then pathauto cleaned name
   include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
 
@@ -34,10 +35,10 @@ function dynamic_term_pages_update_7000(&$sandbox) {
 
   while ($record = $result->fetchAssoc()) {
     db_merge('dynamic_term_pathauto_name')
-    ->key(array('tid' => $record['tid']))
-    ->fields(array(
-      'tid' => $record['tid'],
-      'pathauto_name' => pathauto_cleanstring(check_plain($record['name']))
-    ))->execute();
+      ->key(array('tid' => $record['tid']))
+      ->fields(array(
+        'tid' => $record['tid'],
+        'pathauto_name' => pathauto_cleanstring(check_plain($record['name']))
+      ))->execute();
   }
 }
