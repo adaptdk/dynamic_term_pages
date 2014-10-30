@@ -32,19 +32,24 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
 
 /**
  * Save the pathauto cleaned term name so that we can use it to find our term id
- * Only save a cleaned name if pathauto is actually enabled
- * @param $term - the term object
- * @return bool
+ * Only save a cleaned name if pathauto is actually enabled.
+ *
+ * @param object $term
+ *   The taxonomy term
  */
 function dynamic_term_pages_pathauto_name_save($term) {
-  include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
+  // First check if the alias already exists for some other term. If yes, create
+  // a new alias.
+  if (dynamic_term_pages_name_exists($term)) {
+    dynamic_term_pages_name_uniquify($term);
+  }
 
   // We use tid as a unique key, so do a on duplicate key update
   db_merge('dynamic_term_pathauto_name')
     ->key(array('tid' => $term->tid))
     ->fields(array(
       'tid' => $term->tid,
-      'pathauto_name' => pathauto_cleanstring(check_plain($term->name))
+      'pathauto_name' => dynamic_term_pages_cleanstring($term->name)
     ))->execute();
 }
 
@@ -59,10 +64,11 @@ function dynamic_term_pages_taxonomy_term_load($terms) {
   }
 }
 
-
 /**
  * Lookup pathauto term name in database
  * @param $name
+ *  Dynamic alias. Term name run through dynamic_term_pages_cleanstring()
+ *
  * @return $tid
  */
 function dynamic_term_pages_pathauto_name_load($name) {
@@ -77,6 +83,54 @@ function dynamic_term_pages_pathauto_name_load($name) {
   }
 
   return FALSE;
+}
+
+/**
+ * Check if a dynamic alias already exists for a different term.
+ *
+ * @param object $term
+ *   Term object
+ *
+ * @return
+ *   TRUE if an alias exists, FALSE if not.
+ */
+function dynamic_term_pages_name_exists($term) {
+  $result = db_select('dynamic_term_pathauto_name', 'dtp')
+    ->fields('dtp', array('tid'))
+    ->condition('pathauto_name', dynamic_term_pages_cleanstring($term->name), '=')
+    ->condition('tid', $term->tid, '!=')
+    ->range(0, 1)
+    ->execute()
+    ->fetchField();
+
+  return !empty($result);
+}
+
+/**
+ * Create a unique alias.
+ *
+ * @param $term
+ *   Taxonomy term object.
+ */
+function dynamic_term_pages_name_uniquify(&$term) {
+  if (!dynamic_term_pages_name_exists($term)) {
+    return;
+  }
+
+  $i = 0;
+  do {
+    $term->name = dynamic_term_pages_cleanstring($term->name) . '-' . $i;
+    $i++;
+  } while (dynamic_term_pages_name_exists($term));
+}
+
+/**
+ * Create a clean alias out of a term name.
+ */
+function dynamic_term_pages_cleanstring($string) {
+  include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
+
+  return pathauto_cleanstring(check_plain($string));
 }
 
 /**
