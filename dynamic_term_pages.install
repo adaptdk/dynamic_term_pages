@@ -23,23 +23,19 @@ function dynamic_term_pages_schema() {
  *
  * Add dynamic_term_pathauto_name table and generate references for already
  * existing terms. Might be a heavy operation depending on the number of terms
- * on the site
+ * on the site.
+ *
+ * @todo only import terms of the vocabs we need? So not here but in
+ * dynamic_term_pages_view_save()
  */
 function dynamic_term_pages_install() {
-  // Look for existing terms and save then pathauto cleaned name
-  include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
-
   $result = db_select('taxonomy_term_data', 'ttd')
     ->fields('ttd', array('tid', 'name'))
-    ->execute();
+    ->execute()
+    ->fetchAll();
 
-  while ($record = $result->fetchAssoc()) {
-    db_merge('dynamic_term_pathauto_name')
-      ->key(array('tid' => $record['tid']))
-      ->fields(array(
-        'tid' => $record['tid'],
-        'pathauto_name' => pathauto_cleanstring(check_plain($record['name']))
-      ))->execute();
+  foreach ($result as $term) {
+    dynamic_term_pages_pathauto_name_save($term);
   }
 }
 
@@ -48,4 +44,5 @@ function dynamic_term_pages_install() {
  */
 function dynamic_term_pages_uninstall() {
   variable_del('dynamic_term_pages_enabled_vocabularies');
+  variable_del('dynamic_term_pages_override_taxonomy_term_page');
 }

@@ -39,7 +39,7 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
 function dynamic_term_pages_pathauto_name_save($term) {
   include_once(drupal_get_path('module', 'pathauto') . '/pathauto.inc');
 
-    // We use tid as a unique key, so do a on duplicate key update
+  // We use tid as a unique key, so do a on duplicate key update
   db_merge('dynamic_term_pathauto_name')
     ->key(array('tid' => $term->tid))
     ->fields(array(
