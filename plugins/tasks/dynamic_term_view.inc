@@ -111,12 +111,17 @@ function dynamic_term_pages_view_page() {
 
   // Create canonical url header since we serve the same content on multiple pages
   global $base_url;
+  global $language;
+
   $parts = array();
   foreach ($ordered_args as $oarg) {
-    // pathauto_name property gets attached in hook_taxonomy_term_load().
-    $parts[] = $oarg->pathauto_name;
+    if ($oarg != 'empty') {
+      // pathauto_name property gets attached in hook_taxonomy_term_load().
+      $parts[] = $oarg->pathauto_name[$language->language];
+    }
   }
   $canonical_url = $base_url . '/' . implode('/', $parts);
+
   drupal_add_html_head(array(
       '#tag' => 'link',
       '#attributes' => array(
