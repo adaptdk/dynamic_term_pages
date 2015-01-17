@@ -85,6 +85,7 @@ function dynamic_term_pages_view_menu_alter(&$items, $task) {
  * Entry point for our multiple terms view.
  */
 function dynamic_term_pages_view_page() {
+
   $args = func_get_args();
 
   // Load my task plugin
@@ -95,6 +96,7 @@ function dynamic_term_pages_view_page() {
   ctools_include('context-task-handler');
 
   $order = dynamic_term_pages_view_get_arguments($task, '');
+
   $ordered_args = array();
 
   // Populate an empty array of contexts keyed by vocabulary so we always have a fallback
@@ -104,7 +106,8 @@ function dynamic_term_pages_view_page() {
 
   foreach ($args as $arg) {
     // Look for a matching vocabulary and check if a context for this vocabulary has already been added, we only want one of each
-    if (isset($ordered_args[$arg->vocabulary_machine_name]) && $ordered_args[$arg->vocabulary_machine_name] == 'empty') {
+    if (isset($ordered_args[$arg->vocabulary_machine_name])) {
+      // Assumes parent if vocabulary is in the list.
       $ordered_args[$arg->vocabulary_machine_name] = $arg;
     }
   }
@@ -117,6 +120,7 @@ function dynamic_term_pages_view_page() {
     $parts[] = $oarg->pathauto_name;
   }
   $canonical_url = $base_url . '/' . implode('/', $parts);
+
   drupal_add_html_head(array(
       '#tag' => 'link',
       '#attributes' => array(
@@ -203,6 +207,14 @@ function dynamic_term_pages_view_settings($form, &$form_state) {
     '#default_value' => $override_term_page
   );
 
+  $form['dynamic_term_pages_override_type'] = array(
+    '#type' => 'radios',
+    '#title' => t('Override type'),
+    '#description' => t('Type of override will determine how the lookup is performed'),
+    '#options' => array(0 => t('Default'), 1 => t('Hierarchical')),
+    '#default_value' => variable_get('dynamic_term_pages_override_type', 0),
+  );
+
   $settings = isset($form_state->update_values) ? $form_state->update_values : array();
   return dynamic_term_pages_view_admin_settings($form, $settings);
 }
@@ -235,6 +247,7 @@ function dynamic_term_pages_view_save($subtask, $cache) {
 
     variable_set('dynamic_term_pages_enabled_vocabularies', $filtered);
     variable_set('dynamic_term_pages_override_taxonomy_term_page', $cache->update_values['dynamic_term_pages_override_taxonomy_term_page']);
+    variable_set('dynamic_term_pages_override_type', $cache->update_values['dynamic_term_pages_override_type']);
   }
 }
 

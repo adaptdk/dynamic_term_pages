@@ -1,4 +1,32 @@
 <?php
+
+/**
+ * Implements hook_init().
+ *
+ * We call the globalredirect_init() hook if this page is not a dtp/ page.
+ */
+function dynamic_term_pages_init() {
+  if (module_exists('globalredirect')) {
+    $path = current_path();
+    if (substr($path, 0, 4) != 'dtp/') {
+      globalredirect_init();
+    }
+  }
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * We remove the init hook for globalredirect because it causes problems.
+ */
+function dynamic_term_pages_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'init') {
+    if (isset($implementations['globalredirect'])) {
+      unset($implementations['globalredirect']);
+    }
+  }
+}
+
 /**
  * Implements hook_ctools_plugin_directory
  */
@@ -159,52 +187,158 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
   $o_parts = explode('/', $original_path);
 
   if (!$exists && $parts[0] != 'admin') {
-    if (dynamic_term_pages_term_load($o_parts[0])) {
-      $override = TRUE;
-    }
+    $override = TRUE;
   }
   elseif (variable_get('dynamic_term_pages_override_taxonomy_term_page', FALSE) && $parts[0] == 'taxonomy' && !isset($parts[3])) {
-    if ($term = dynamic_term_pages_term_load($o_parts[0])) {
-      // Check if term is a in enabled taxonomies for dynamic term pages
-      $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
-      if (in_array($term->vocabulary_machine_name, array_keys($enabled))) {
-        $override = TRUE;
-      }
-    }
+    $override = TRUE;
   }
 
   if ($override) {
-    $path = 'dtp/' . $original_path;
+
+    $override_type = variable_get('dynamic_term_pages_override_type', 0);
+
+    module_load_include('inc', 'pathauto', 'pathauto');
+
+    switch ($override_type) {
+      case 1:
+        $term_path = dynamic_term_pages_process_terms_hierarchical($o_parts);
+        break;
+      default:
+        $term_path = dynamic_term_pages_process_terms_default($o_parts);
+    }
+
+    if (!$term_path) {
+      // Exit if a term is not valid
+      return;
+    }
+
+    // Redirect if path is not transliterated.
+    if (substr($term_path, 1) != $original_path) {
+      drupal_goto(substr($term_path, 1));
+    }
+
+    $path = 'dtp' . $term_path;
   }
 }
 
 /**
- * Custom wildcard menu loader
- * @param $term_name
- * @return object|bool
+ * Load terms using default method.
+ *
+ * @param array $o_parts
+ * @return bool|string
  */
-function dynamic_term_pages_term_load($term_name) {
-  // Look for argument in saved clean data
-  $tid = dynamic_term_pages_pathauto_name_load($term_name);
+function dynamic_term_pages_process_terms_default($o_parts) {
+  $term_path = '';
 
-  if ($tid) {
-    // Then try and load the term
-    $term = taxonomy_term_load($tid);
+  $parents = _dynamic_term_pages_get_parents();
+  $vids = array_keys($parents);
 
-    if (!empty($term)) {
-      return $term;
+  foreach ($o_parts AS $slug) {
+    $term = dynamic_term_pages_term_load($slug, $vids);
+    if (!$term) {
+      return FALSE;
+    }
+    $term_path .= '/' . pathauto_cleanstring($term->name);
+  }
+
+  return $term_path;
+}
+
+/**
+ * Load terms using hierarchical method.
+ *
+ * @param array $o_parts
+ * @return bool|string
+ */
+function dynamic_term_pages_process_terms_hierarchical($o_parts) {
+  $parents = _dynamic_term_pages_get_parents();
+  $vids = array_keys($parents);
+
+  // Determine terms
+  $term_path = '';
+  foreach ($o_parts AS $slug) {
+    $term = dynamic_term_pages_term_load($slug, $vids, $parents);
+    if (!$term) {
+      return FALSE;
+    }
+
+    $parents[$term->vid] = $term->tid;
+    $term_path .= '/' . pathauto_cleanstring($term->name);
+  }
+
+  return $term_path;
+}
+
+/**
+ * Get the parents array.
+ *
+ * @return array
+ */
+function _dynamic_term_pages_get_parents() {
+  $parents = array();
+
+  $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
+  $enabled = array_keys($enabled);
+  foreach ($enabled AS $voc) {
+    $voc  = taxonomy_vocabulary_machine_name_load($voc);
+    $parents[$voc->vid] = 0;
+  }
+
+  return $parents;
+}
+
+/**
+ * Load dynamic term page term.
+ *
+ * We load using SQL because
+ *
+ * @param string $slug
+ * @param array $vids
+ * @param array $parents
+ * @return stdClass|bool
+ */
+function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
+
+  $tid = dynamic_term_pages_pathauto_name_load($slug);
+
+  if (!$tid) {
+
+    $query = db_select('taxonomy_term_data', 'ttd')->fields('ttd', array('tid'))->condition('name', $slug);
+    $query->join('taxonomy_term_hierarchy', 'tth', 'ttd.tid=tth.tid');
+
+    if (!empty($parents)) {
+      $or = db_or();
+      foreach ($parents AS $vid => $tid) {
+        $and = db_and();
+        $and->condition('ttd.vid', $vid);
+        $and->condition('tth.parent', $tid);
+
+        $or->condition($and);
+      }
+
+      $query->condition($or);
+    }
+    elseif (!empty($vids)) {
+      $or = db_or();
+      foreach ($vids AS $vid) {
+        $or->condition('ttd.vid', $vid);
+      }
+
+      $query->condition($or);
+    }
+
+    $result = $query->execute()->fetchAssoc();
+    if (empty($result['tid'])) {
+      return FALSE;
+    }
+    else {
+      return taxonomy_term_load($result['tid']);
     }
   }
-
-  // Fallback, look up term by name
-  $term = taxonomy_get_term_by_name($term_name);
-
-  if ($term) {
-    // taxonomy_get_term_by_name returns an array keyed by tid
-    $term = reset($term);
-
-    return $term;
+  else {
+    $result = taxonomy_term_load($tid);
   }
 
-  return FALSE;
+  return $result;
+
 }
