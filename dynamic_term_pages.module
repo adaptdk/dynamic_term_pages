@@ -298,7 +298,6 @@ function _dynamic_term_pages_get_parents() {
  * @return stdClass|bool
  */
 function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
-
   $tid = dynamic_term_pages_pathauto_name_load($slug);
 
   if (!$tid) {
@@ -332,13 +331,28 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
       return FALSE;
     }
     else {
-      return taxonomy_term_load($result['tid']);
+      $result = taxonomy_term_load($result['tid']);
     }
   }
   else {
     $result = taxonomy_term_load($tid);
+    if (!$result) {
+      return FALSE;
+    }
   }
 
-  return $result;
+  // Set active term
+  dynamic_term_pages_active_terms($result);
 
+  return $result;
+}
+
+function dynamic_term_pages_active_terms($term = NULL) {
+  $terms = &drupal_static(__FUNCTION__, array());
+
+  if (!empty($term)) {
+    $terms[$term->tid] = $term;
+  }
+
+  return $terms;
 }
