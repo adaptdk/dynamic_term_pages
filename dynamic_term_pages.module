@@ -357,6 +357,12 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
   return $result;
 }
 
+/**
+ * Get the list of active terms within current request.
+ * 
+ * @param [optional] $term
+ * @return mixed
+ */
 function dynamic_term_pages_active_terms($term = NULL) {
   $terms = &drupal_static(__FUNCTION__, array());
 
