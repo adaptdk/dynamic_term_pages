@@ -298,6 +298,13 @@ function _dynamic_term_pages_get_parents() {
  * @return stdClass|bool
  */
 function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
+
+  // Static cache for terms.
+  $terms = &drupal_static(__FUNCTION__, array());
+  if (!empty($terms[$slug])) {
+    return $terms[$slug];
+  }
+
   $tid = dynamic_term_pages_pathauto_name_load($slug);
 
   if (!$tid) {
@@ -343,6 +350,9 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
 
   // Set active term
   dynamic_term_pages_active_terms($result);
+
+  // Store term in static cache with slug as key.
+  $terms[$slug] = $result;
 
   return $result;
 }
