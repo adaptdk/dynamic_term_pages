@@ -222,6 +222,17 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
 }
 
 /**
+ * Implements hook_url_outbound_alter().
+ *
+ * Remove dtp/ from outbound url's, because we never want to see them.
+ */
+function dynamic_term_pages_url_outbound_alter(&$path, &$options, $original_path) {
+  if ( substr($path, 0, 4) == 'dtp/' ) {
+    $path = substr($path, 4);
+  }
+}
+
+/**
  * Load terms using default method.
  *
  * @param array $o_parts
@@ -359,7 +370,7 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
 
 /**
  * Get the list of active terms within current request.
- * 
+ *
  * @param [optional] $term
  * @return mixed
  */
