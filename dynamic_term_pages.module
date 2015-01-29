@@ -357,6 +357,22 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
     if (!$result) {
       return FALSE;
     }
+
+    // Handle parents so terms in hierarchy are not directly accessible.
+    if (!empty($parents)) {
+      $parent_tid = $parents[$result->vid];
+      $term_parents = taxonomy_get_parents($tid);
+      if ($parent_tid == 0) {
+        if (!empty($term_parents)) {
+          return FALSE;
+        }
+      }
+      else {
+        if (empty($term_parents[$parent_tid])) {
+          return FALSE;
+        }
+      }
+    }
   }
 
   // Set active term
