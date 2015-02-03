@@ -193,6 +193,13 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
     $override = TRUE;
   }
 
+  // Handle front page.
+  if (count($o_parts) == 1) {
+    if (empty($o_parts[0])) {
+      $override == FALSE;
+    }
+  }
+
   if ($override) {
 
     $override_type = variable_get('dynamic_term_pages_override_type', 0);
@@ -320,31 +327,35 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
 
   if (!$tid) {
 
-    $query = db_select('taxonomy_term_data', 'ttd')->fields('ttd', array('tid'))->condition('name', $slug);
-    $query->join('taxonomy_term_hierarchy', 'tth', 'ttd.tid=tth.tid');
+    $sql = "SELECT ttd.tid FROM {taxonomy_term_data} AS ttd
+      LEFT JOIN {taxonomy_term_hierarchy} AS tth ON ttd.tid=tth.tid
+      WHERE ttd.name = '" . check_plain($slug) . "'";
 
     if (!empty($parents)) {
-      $or = db_or();
+      $sql .= " AND (";
+      $parent_sql = array();
       foreach ($parents AS $vid => $tid) {
-        $and = db_and();
-        $and->condition('ttd.vid', $vid);
-        $and->condition('tth.parent', $tid);
-
-        $or->condition($and);
+        $parent_sql[] = "(ttd.vid = " . $vid . " AND tth.parent = " . $tid . ")";
       }
 
-      $query->condition($or);
+      $sql .= implode(" OR ", $parent_sql);
+      $sql .= ")";
     }
     elseif (!empty($vids)) {
-      $or = db_or();
+      $sql .= " AND (";
+      $vid_sql = array();
       foreach ($vids AS $vid) {
-        $or->condition('ttd.vid', $vid);
+        $vid_sql[] = "(ttd.vid = " . $vid . ")";
       }
 
-      $query->condition($or);
+      $sql .= implode(" OR ", $vid_sql);
+      $sql .= ")";
     }
 
-    $result = $query->execute()->fetchAssoc();
+    $query = db_query($sql);
+
+    $result = $query->fetchAssoc();
+
     if (empty($result['tid'])) {
       return FALSE;
     }
