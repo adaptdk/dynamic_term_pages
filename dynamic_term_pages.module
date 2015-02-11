@@ -256,7 +256,7 @@ function dynamic_term_pages_process_terms_default($o_parts) {
     if (!$term) {
       return FALSE;
     }
-    $term_path .= '/' . pathauto_cleanstring($term->name);
+    $term_path .= '/' . pathauto_cleanstring($term->pathauto_name);
   }
 
   return $term_path;
@@ -281,7 +281,7 @@ function dynamic_term_pages_process_terms_hierarchical($o_parts) {
     }
 
     $parents[$term->vid] = $term->tid;
-    $term_path .= '/' . pathauto_cleanstring($term->name);
+    $term_path .= '/' . pathauto_cleanstring($term->pathauto_name);
   }
 
   return $term_path;

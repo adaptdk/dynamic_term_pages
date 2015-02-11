@@ -117,7 +117,9 @@ function dynamic_term_pages_view_page() {
   $parts = array();
   foreach ($ordered_args as $oarg) {
     // pathauto_name property gets attached in hook_taxonomy_term_load().
-    $parts[] = $oarg->pathauto_name;
+    if ($oarg != 'empty') {
+      $parts[] = $oarg->pathauto_name;
+    }
   }
   $canonical_url = $base_url . '/' . implode('/', $parts);
 
