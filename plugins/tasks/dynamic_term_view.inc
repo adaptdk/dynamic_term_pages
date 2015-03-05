@@ -167,7 +167,7 @@ function dynamic_term_pages_view_get_arguments($task, $subtask_id) {
       'identifier' => $k,
       'id' => $i,
       'name' => 'term',
-      'settings' => array('input_form' => 'term'),
+      'settings' => array('input_form' => 'tid'),
       'default' => 'NULL',
     );
     $i++;

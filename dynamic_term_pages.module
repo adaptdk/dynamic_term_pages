@@ -370,7 +370,7 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
     }
 
     // Handle parents so terms in hierarchy are not directly accessible.
-    if (!empty($parents)) {
+    if (isset($parents[$result->vid])) {
       $parent_tid = $parents[$result->vid];
       $term_parents = taxonomy_get_parents($tid);
       if ($parent_tid === 0) {
