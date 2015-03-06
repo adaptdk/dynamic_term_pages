@@ -384,6 +384,9 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
         }
       }
     }
+    else {
+      return FALSE;
+    }
   }
 
   // Set active term
