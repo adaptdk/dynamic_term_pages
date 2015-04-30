@@ -112,25 +112,32 @@ function dynamic_term_pages_view_page() {
     }
   }
 
-  // Create canonical url header since we serve the same content on multiple pages
-  global $base_url;
-  $parts = array();
-  foreach ($ordered_args as $oarg) {
-    // pathauto_name property gets attached in hook_taxonomy_term_load().
-    if ($oarg != 'empty') {
-      $parts[] = $oarg->pathauto_name;
-    }
-  }
-  $canonical_url = $base_url . '/' . implode('/', $parts);
+  // Don't set if override is set to hierarchical, since we won't have all the terms necessary to set the
+  // correct canonical url
+  $override_type = variable_get('dynamic_term_pages_override_type', 0);
 
-  drupal_add_html_head(array(
-      '#tag' => 'link',
-      '#attributes' => array(
-        'href' => $canonical_url,
-        'rel' => 'canonical',
-      )
-    ),
-    'dynamic_term_canonical');
+  if ($override_type == 0) {
+
+    // Create canonical url header since we serve the same content on multiple pages
+    global $base_url;
+    $parts = array();
+    foreach ($ordered_args as $oarg) {
+      // pathauto_name property gets attached in hook_taxonomy_term_load().
+      if ($oarg != 'empty') {
+        $parts[] = $oarg->pathauto_name;
+      }
+    }
+    $canonical_url = $base_url . '/' . implode('/', $parts);
+
+    drupal_add_html_head(array(
+        '#tag' => 'link',
+        '#attributes' => array(
+          'href' => $canonical_url,
+          'rel' => 'canonical',
+        )
+      ),
+      'dynamic_term_canonical');
+  }
 
   $contexts = ctools_context_handler_get_task_contexts($task, '', $ordered_args);
 
