@@ -72,12 +72,21 @@ function dynamic_term_pages_pathauto_name_save($term) {
     dynamic_term_pages_name_uniquify($term);
   }
 
+  // Permit having different strings for term name and path.
+  $pathauto_name = "";
+  if ($term->path['pathauto'] == 1) {
+    $pathauto_name = dynamic_term_pages_cleanstring($term->name);
+  }
+  else {
+    $pathauto_name = $term->path['alias'];
+  }
+
   // We use tid as a unique key, so do a on duplicate key update
   db_merge('dynamic_term_pathauto_name')
     ->key(array('tid' => $term->tid))
     ->fields(array(
       'tid' => $term->tid,
-      'pathauto_name' => dynamic_term_pages_cleanstring($term->name)
+      'pathauto_name' => $pathauto_name
     ))->execute();
 }
 
