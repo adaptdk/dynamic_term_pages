@@ -73,11 +73,8 @@ function dynamic_term_pages_pathauto_name_save($term) {
   }
 
   // Permit having different strings for term name and path.
-  $pathauto_name = "";
-  if ($term->path['pathauto'] == 1) {
-    $pathauto_name = dynamic_term_pages_cleanstring($term->name);
-  }
-  else {
+  $pathauto_name = dynamic_term_pages_cleanstring($term->name);
+  if (isset($term->path) && $term->path['pathauto'] == 0) {
     $pathauto_name = $term->path['alias'];
   }
 
