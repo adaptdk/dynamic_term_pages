@@ -92,7 +92,9 @@ function dynamic_term_pages_pathauto_name_save($term) {
  * Implements hook_taxonomy_term_load().
  */
 function dynamic_term_pages_taxonomy_term_load($terms) {
-  $result = db_select('dynamic_term_pathauto_name', 'dtp')->fields('dtp', array('tid', 'pathauto_name'))->condition('dtp.tid', array_keys($terms), 'IN')
+  $result = db_select('dynamic_term_pathauto_name', 'dtp')
+    ->fields('dtp', array('tid', 'pathauto_name'))
+    ->condition('dtp.tid', array_keys($terms), 'IN')
     ->execute();
   foreach ($result as $record) {
     $terms[$record->tid]->pathauto_name = $record->pathauto_name;
@@ -241,7 +243,7 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
  * Remove dtp/ from outbound url's, because we never want to see them.
  */
 function dynamic_term_pages_url_outbound_alter(&$path, &$options, $original_path) {
-  if ( substr($path, 0, 4) == 'dtp/' ) {
+  if (substr($path, 0, 4) == 'dtp/') {
     $path = substr($path, 4);
   }
 }
@@ -259,7 +261,7 @@ function dynamic_term_pages_process_terms_default($o_parts) {
   $vids = array_keys($parents);
 
   foreach ($o_parts AS $slug) {
-    $term = dynamic_term_pages_term_load($slug, $vids);
+    $term = dynamic_term_pages_term_load($slug, $vids, array(), FALSE);
     if (!$term) {
       return FALSE;
     }
@@ -282,7 +284,7 @@ function dynamic_term_pages_process_terms_hierarchical($o_parts) {
   // Determine terms
   $term_path = '';
   foreach ($o_parts AS $slug) {
-    $term = dynamic_term_pages_term_load($slug, $vids, $parents);
+    $term = dynamic_term_pages_term_load($slug, $vids, $parents, FALSE);
     if (!$term) {
       return FALSE;
     }
@@ -305,7 +307,7 @@ function _dynamic_term_pages_get_parents() {
   $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
   $enabled = array_keys($enabled);
   foreach ($enabled AS $voc) {
-    $voc  = taxonomy_vocabulary_machine_name_load($voc);
+    $voc = taxonomy_vocabulary_machine_name_load($voc);
     $parents[$voc->vid] = 0;
   }
 
@@ -320,11 +322,11 @@ function _dynamic_term_pages_get_parents() {
  * @param string $slug
  * @param array $vids
  * @param array $parents
+ * @param bool $menu - defaults to true, so we know when the function is called with menu_load_object
  * @return stdClass|bool
  */
-function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
-
-  // Static cache for terms.
+function dynamic_term_pages_term_load($slug, $vids = array(), $parents = array(), $menu = TRUE) {
+  // Set static cache for terms.
   $terms = &drupal_static(__FUNCTION__, array());
   if (!empty($terms[$slug])) {
     return $terms[$slug];
@@ -333,7 +335,6 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
   $tid = dynamic_term_pages_pathauto_name_load($slug);
 
   if (!$tid) {
-
     $sql = "SELECT ttd.tid FROM {taxonomy_term_data} AS ttd
       LEFT JOIN {taxonomy_term_hierarchy} AS tth ON ttd.tid=tth.tid
       WHERE ttd.name = '" . check_plain($slug) . "'";
@@ -362,7 +363,6 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
     $query = db_query($sql);
 
     $result = $query->fetchAssoc();
-
     if (empty($result['tid'])) {
       return FALSE;
     }
@@ -398,8 +398,10 @@ function dynamic_term_pages_term_load($slug, $vids=array(), $parents=array()) {
     }
   }
 
-  // Set active term
-  dynamic_term_pages_active_terms($result);
+  // Only set active terms when it's the actual page load
+  if (!$menu) {
+    dynamic_term_pages_active_terms($result);
+  }
 
   // Store term in static cache with slug as key.
   $terms[$slug] = $result;
