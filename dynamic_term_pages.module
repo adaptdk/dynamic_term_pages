@@ -71,33 +71,61 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
  * @param object $term
  *   The taxonomy term
  */
-function dynamic_term_pages_pathauto_name_save($term) {
-  // First check if the alias already exists for some other term. If yes, create
-  // a new alias.
 
-  if (dynamic_term_pages_name_exists($term)) {
-    dynamic_term_pages_name_uniquify($term);
+function dynamic_term_pages_pathauto_name_save($tid) {
+  $terms = array();
+
+  // For multilingual support we need a term load
+  $term = taxonomy_term_load($tid);
+
+  // The field where to look for translated term name. Assume the title modules name_field
+  $name_field = variable_get('dynamic_term_pages_term_name_field', 'name_field');
+
+  if (is_array($term->$name_field) && !empty($term->$name_field)) {
+    foreach ($term->$name_field as $lang => $field) {
+      $field = reset($field);
+      $terms[$lang] = new stdClass();
+      $terms[$lang]->name = $field['value'];
+      $terms[$lang]->tid = $tid;
+     }
+  }
+  else {
+    // Default to standard term name field
+    $default = language_default('language');
+    $terms[$default] = new stdClass();
+    $terms[$default]->name = $term->name;
+    $terms[$default]->tid = $tid;
   }
 
-  // We use tid as a unique key, so do a on duplicate key update
-  db_merge('dynamic_term_pathauto_name')
-    ->key(array('tid' => $term->tid))
-    ->fields(array(
-      'tid' => $term->tid,
-      'pathauto_name' => dynamic_term_pages_cleanstring($term->name)
-    ))->execute();
+  if (!empty($terms)) {
+    foreach ($terms as $lang => $term) {
+      // First check if the alias already exists for some other term. If yes, create
+      // a new alias.
+      if (dynamic_term_pages_name_exists($term, $lang)) {
+        dynamic_term_pages_name_uniquify($term, $lang);
+      }
+
+      // We use tid as a unique key, so do a on duplicate key update
+      db_merge('dynamic_term_pathauto_name')
+      ->key(array('tid' => $term->tid, 'language' => $lang))
+      ->fields(array(
+        'tid' => $term->tid,
+        'pathauto_name' => dynamic_term_pages_cleanstring($term->name),
+        'language' => $lang
+      ))->execute();
+    }
+  }
 }
 
 /**
  * Implements hook_taxonomy_term_load().
  */
 function dynamic_term_pages_taxonomy_term_load($terms) {
-  $result = db_select('dynamic_term_pathauto_name', 'dtp')
-    ->fields('dtp', array('tid', 'pathauto_name'))
-    ->condition('dtp.tid', array_keys($terms), 'IN')
-    ->execute();
+  $result = db_select('dynamic_term_pathauto_name', 'dtp')->fields('dtp', array('tid', 'pathauto_name', 'language'))
+            ->condition('dtp.tid', array_keys($terms), 'IN')
+            ->execute();
   foreach ($result as $record) {
-    $terms[$record->tid]->pathauto_name = $record->pathauto_name;
+    $terms[$record->tid]->pathauto_name[$record->language] = $record->pathauto_name;
   }
 }
 
@@ -109,11 +137,14 @@ function dynamic_term_pages_taxonomy_term_load($terms) {
  * @return $tid
  */
 function dynamic_term_pages_pathauto_name_load($name) {
+  global $language;
+
   $result = db_select('dynamic_term_pathauto_name', 'dtp')
-    ->fields('dtp')
-    ->condition('pathauto_name', $name)
-    ->execute()
-    ->fetchAssoc();
+            ->fields('dtp')
+            ->condition('pathauto_name', $name)
+            ->condition('language', $language->language)
+            ->execute()
+            ->fetchAssoc();
 
   if ($result) {
     return $result['tid'];
@@ -127,14 +158,15 @@ function dynamic_term_pages_pathauto_name_load($name) {
  *
  * @param object $term
  *   Term object
- *
+ * @param string $lang
  * @return
  *   TRUE if an alias exists, FALSE if not.
  */
-function dynamic_term_pages_name_exists($term) {
+function dynamic_term_pages_name_exists($term, $lang) {
   $result = db_select('dynamic_term_pathauto_name', 'dtp')
     ->fields('dtp', array('tid'))
     ->condition('pathauto_name', dynamic_term_pages_cleanstring($term->name), '=')
+    ->condition('language', $lang, '=')
     ->condition('tid', $term->tid, '!=')
     ->range(0, 1)
     ->execute()
@@ -149,8 +181,8 @@ function dynamic_term_pages_name_exists($term) {
  * @param $term
  *   Taxonomy term object.
  */
-function dynamic_term_pages_name_uniquify(&$term) {
-  if (!dynamic_term_pages_name_exists($term)) {
+function dynamic_term_pages_name_uniquify(&$term, $lang) {
+  if (!dynamic_term_pages_name_exists($term, $lang)) {
     return;
   }
 
@@ -158,7 +190,7 @@ function dynamic_term_pages_name_uniquify(&$term) {
   do {
     $term->name = dynamic_term_pages_cleanstring($term->name) . '-' . $i;
     $i++;
-  } while (dynamic_term_pages_name_exists($term));
+  } while (dynamic_term_pages_name_exists($term, $lang));
 }
 
 /**

@@ -10,9 +10,10 @@ function dynamic_term_pages_schema() {
     'description' => 'Table for storing a mapping between a term and the pathauto cleaned name',
     'fields' => array(
       'tid' => array('type' => 'int', 'not null' => TRUE, 'length' => 11, 'default' => 0),
-      'pathauto_name' => array('type' => 'varchar', 'length' => 256, 'not null' => TRUE, 'default' => '')
+      'pathauto_name' => array('type' => 'varchar', 'length' => 256, 'not null' => TRUE, 'default' => ''),
+      'language' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'description' => "The language for this data item.")
     ),
-    'primary key' => array('tid'),
+    'primary key' => array('tid', 'language'),
   );
 
   return $schema;
@@ -30,12 +31,12 @@ function dynamic_term_pages_schema() {
  */
 function dynamic_term_pages_install() {
   $result = db_select('taxonomy_term_data', 'ttd')
-    ->fields('ttd', array('tid', 'name'))
+    ->fields('ttd', array('tid'))
     ->execute()
     ->fetchAll();
 
   foreach ($result as $term) {
-    dynamic_term_pages_pathauto_name_save($term);
+    dynamic_term_pages_pathauto_name_save($term->tid);
   }
 }
 
@@ -45,4 +46,23 @@ function dynamic_term_pages_install() {
 function dynamic_term_pages_uninstall() {
   variable_del('dynamic_term_pages_enabled_vocabularies');
   variable_del('dynamic_term_pages_override_taxonomy_term_page');
+}
+
+/**
+ * Add multilingual support
+ */
+function dynamic_term_pages_update_7000() {
+  $new = array(
+    'type' => 'varchar',
+    'description' => "The language for this data item.",
+    'length' => 32,
+    'not null' => TRUE,
+  );
+  db_add_field('dynamic_term_pathauto_name', 'language', $new);
+
+  db_drop_primary_key('dynamic_term_pathauto_name');
+  db_add_primary_key('dynamic_term_pathauto_name', array('tid', 'language'));
+
+  // Run install again to get translation for existing
+  dynamic_term_pages_install();
 }
