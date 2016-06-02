@@ -297,7 +297,13 @@ function dynamic_term_pages_process_terms_default($o_parts) {
     if (!$term) {
       return FALSE;
     }
-    $term_path .= '/' . pathauto_cleanstring($term->pathauto_name);
+
+    $pathauto_name = $term->pathauto_name;
+    if (is_array($pathauto_name)) {
+      global $language;
+      $pathauto_name = $term->pathauto_name[$language->language];
+    }
+    $term_path .= '/' . pathauto_cleanstring($pathauto_name);
   }
 
   return $term_path;
@@ -322,7 +328,12 @@ function dynamic_term_pages_process_terms_hierarchical($o_parts) {
     }
 
     $parents[$term->vid] = $term->tid;
-    $term_path .= '/' . pathauto_cleanstring($term->pathauto_name);
+    $pathauto_name = $term->pathauto_name;
+    if (is_array($pathauto_name)) {
+      global $language;
+      $pathauto_name = $term->pathauto_name[$language->language];
+    }
+    $term_path .= '/' . pathauto_cleanstring($pathauto_name);
   }
 
   return $term_path;
