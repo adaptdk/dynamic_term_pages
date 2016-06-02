@@ -43,7 +43,7 @@ function dynamic_term_pages_ctools_plugin_directory($module, $plugin) {
 function dynamic_term_pages_taxonomy_term_insert($term) {
   $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
   if (in_array($term->vocabulary_machine_name, array_keys($enabled))) {
-    dynamic_term_pages_pathauto_name_save($term);
+    dynamic_term_pages_pathauto_name_save($term->tid);
   }
 }
 
@@ -53,7 +53,7 @@ function dynamic_term_pages_taxonomy_term_insert($term) {
 function dynamic_term_pages_taxonomy_term_update($term) {
   $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
   if (in_array($term->vocabulary_machine_name, array_keys($enabled))) {
-    dynamic_term_pages_pathauto_name_save($term);
+    dynamic_term_pages_pathauto_name_save($term->tid);
   }
 }
 
