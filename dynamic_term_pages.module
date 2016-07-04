@@ -316,6 +316,12 @@ function dynamic_term_pages_process_terms_default($o_parts) {
  * @return bool|string
  */
 function dynamic_term_pages_process_terms_hierarchical($o_parts) {
+  // On ajax request(load more) we need to remove "dtp".
+  $key = array_search('dtp', $o_parts);
+  if ($key !== FALSE) {
+    unset($o_parts[$key]);
+  }
+
   $parents = _dynamic_term_pages_get_parents();
   $vids = array_keys($parents);
 
@@ -326,6 +332,9 @@ function dynamic_term_pages_process_terms_hierarchical($o_parts) {
     if (!$term) {
       return FALSE;
     }
+    
+    // Store it agian in case _menu_load_objects called it before.
+    dynamic_term_pages_active_terms($term);
 
     $parents[$term->vid] = $term->tid;
     $pathauto_name = $term->pathauto_name;
