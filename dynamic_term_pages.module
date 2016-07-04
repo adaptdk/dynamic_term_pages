@@ -71,7 +71,6 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
  * @param object $term
  *   The taxonomy term
  */
-
 function dynamic_term_pages_pathauto_name_save($tid) {
   $terms = array();
 
@@ -87,7 +86,7 @@ function dynamic_term_pages_pathauto_name_save($tid) {
       $terms[$lang] = new stdClass();
       $terms[$lang]->name = $field['value'];
       $terms[$lang]->tid = $tid;
-     }
+    }
   }
   else {
     // Default to standard term name field
@@ -107,12 +106,12 @@ function dynamic_term_pages_pathauto_name_save($tid) {
 
       // We use tid as a unique key, so do a on duplicate key update
       db_merge('dynamic_term_pathauto_name')
-      ->key(array('tid' => $term->tid, 'language' => $lang))
-      ->fields(array(
-        'tid' => $term->tid,
-        'pathauto_name' => dynamic_term_pages_cleanstring($term->name),
-        'language' => $lang
-      ))->execute();
+          ->key(array('tid' => $term->tid, 'language' => $lang))
+          ->fields(array(
+            'tid' => $term->tid,
+            'pathauto_name' => dynamic_term_pages_cleanstring($term->name),
+            'language' => $lang
+          ))->execute();
     }
   }
 }
@@ -122,8 +121,8 @@ function dynamic_term_pages_pathauto_name_save($tid) {
  */
 function dynamic_term_pages_taxonomy_term_load($terms) {
   $result = db_select('dynamic_term_pathauto_name', 'dtp')->fields('dtp', array('tid', 'pathauto_name', 'language'))
-            ->condition('dtp.tid', array_keys($terms), 'IN')
-            ->execute();
+      ->condition('dtp.tid', array_keys($terms), 'IN')
+      ->execute();
   foreach ($result as $record) {
     $terms[$record->tid]->pathauto_name[$record->language] = $record->pathauto_name;
   }
@@ -140,11 +139,11 @@ function dynamic_term_pages_pathauto_name_load($name) {
   global $language;
 
   $result = db_select('dynamic_term_pathauto_name', 'dtp')
-            ->fields('dtp')
-            ->condition('pathauto_name', $name)
-            ->condition('language', $language->language)
-            ->execute()
-            ->fetchAssoc();
+      ->fields('dtp')
+      ->condition('pathauto_name', $name)
+      ->condition('language', $language->language)
+      ->execute()
+      ->fetchAssoc();
 
   if ($result) {
     return $result['tid'];
@@ -164,13 +163,13 @@ function dynamic_term_pages_pathauto_name_load($name) {
  */
 function dynamic_term_pages_name_exists($term, $lang) {
   $result = db_select('dynamic_term_pathauto_name', 'dtp')
-    ->fields('dtp', array('tid'))
-    ->condition('pathauto_name', dynamic_term_pages_cleanstring($term->name), '=')
-    ->condition('language', $lang, '=')
-    ->condition('tid', $term->tid, '!=')
-    ->range(0, 1)
-    ->execute()
-    ->fetchField();
+      ->fields('dtp', array('tid'))
+      ->condition('pathauto_name', dynamic_term_pages_cleanstring($term->name), '=')
+      ->condition('language', $lang, '=')
+      ->condition('tid', $term->tid, '!=')
+      ->range(0, 1)
+      ->execute()
+      ->fetchField();
 
   return !empty($result);
 }
@@ -316,6 +315,12 @@ function dynamic_term_pages_process_terms_default($o_parts) {
  * @return bool|string
  */
 function dynamic_term_pages_process_terms_hierarchical($o_parts) {
+  // On ajax request(load more) we need to remove "dtp".
+  $key = array_search('dtp', $o_parts);
+  if ($key !== FALSE) {
+    unset($o_parts[$key]);
+  }
+
   $parents = _dynamic_term_pages_get_parents();
   $vids = array_keys($parents);
 
@@ -326,6 +331,9 @@ function dynamic_term_pages_process_terms_hierarchical($o_parts) {
     if (!$term) {
       return FALSE;
     }
+    
+    // Store it agian in case _menu_load_objects called it before.
+    dynamic_term_pages_active_terms($term);
 
     $parents[$term->vid] = $term->tid;
     $pathauto_name = $term->pathauto_name;
