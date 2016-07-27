@@ -275,8 +275,42 @@ function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_lang
  * Remove dtp/ from outbound url's, because we never want to see them.
  */
 function dynamic_term_pages_url_outbound_alter(&$path, &$options, $original_path) {
-  if (substr($path, 0, 4) == 'dtp/') {
-    $path = substr($path, 4);
+  // Use the advanced drupal_static() pattern, since this is called very often.
+  static $drupal_static_fast;
+  if (!isset($drupal_static_fast)) {
+    $drupal_static_fast['cache'] = &drupal_static(__FUNCTION__);
+  }
+  $cache = &$drupal_static_fast['cache'];
+
+  if (!isset($cache[$original_path])) {
+    if (substr($path, 0, 4) == 'dtp/') {
+      global $language_url;
+
+      $path = substr($path, 4);
+
+      // Fix translations for dtp paths
+      $parts = explode('/', $path);
+      $trans_path = array();
+
+      if (!empty($parts)) {
+        foreach ($parts as $part) {
+          $result = db_query("SELECT d2.pathauto_name FROM dynamic_term_pathauto_name d1
+        INNER JOIN dynamic_term_pathauto_name d2 ON d1.tid = d2.tid WHERE d2.language = :lang AND d1.pathauto_name = :term", array(
+            ':term' => $part,
+            ':lang' => $language_url->language
+          ));
+          $trans = $result->fetchField();
+          $trans_path[] = $trans ? $trans : $part;
+        }
+
+        $path = implode('/', $trans_path);
+      }
+
+      $cache[$original_path] = $path;
+    }
+  }
+  else {
+    $path = $cache[$original_path];
   }
 }
 
@@ -332,15 +366,18 @@ function dynamic_term_pages_process_terms_hierarchical($o_parts) {
     if (!$term) {
       return FALSE;
     }
-    
-    // Store it agian in case _menu_load_objects called it before.
+
+    // Store it again in case _menu_load_objects called it before.
     dynamic_term_pages_active_terms($term);
 
     $parents[$term->vid] = $term->tid;
     $pathauto_name = $term->pathauto_name;
+
     if (is_array($pathauto_name)) {
       global $language;
-      $pathauto_name = $term->pathauto_name[$language->language];
+
+      // Setup default in case it's not translated
+      $pathauto_name = isset($term->pathauto_name[$language->language]) ? $term->pathauto_name[$language->language] : reset($term->pathauto_name);
     }
     $term_path .= '/' . pathauto_cleanstring($pathauto_name);
   }
