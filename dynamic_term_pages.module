@@ -206,6 +206,11 @@ function dynamic_term_pages_cleanstring($string) {
  * Implements hook_url_inbound_alter
  */
 function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_language) {
+  // Allow to create menu items with "dtp/*" pattern.
+  if(isset($_POST['form_id']) && $_POST['form_id'] === 'menu_edit_item'){
+    return;
+  }  
+  
   if (variable_get('dynamic_term_pages_view_disabled', TRUE)) {
     return;
   }
