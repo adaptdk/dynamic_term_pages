@@ -130,13 +130,12 @@ function dynamic_term_pages_view_page() {
     $canonical_url = $base_url . '/' . implode('/', $parts);
 
     drupal_add_html_head(array(
-        '#tag' => 'link',
-        '#attributes' => array(
-          'href' => $canonical_url,
-          'rel' => 'canonical',
-        )
-      ),
-      'dynamic_term_canonical');
+      '#tag' => 'link',
+      '#attributes' => array(
+        'href' => $canonical_url,
+        'rel' => 'canonical',
+      )
+        ), 'dynamic_term_canonical');
   }
 
   $contexts = ctools_context_handler_get_task_contexts($task, '', $ordered_args);
@@ -240,7 +239,9 @@ function dynamic_term_pages_view_settings_submit(&$form, &$form_state) {
  */
 function dynamic_term_pages_view_save($subtask, $cache) {
   if (isset($cache->update_values)) {
-    $filtered = array_filter($cache->update_values['dynamic_term_pages_enabled_vocabularies'], function ($e) { return $e['enabled'] == 1; });
+    $filtered = array_filter($cache->update_values['dynamic_term_pages_enabled_vocabularies'], function ($e) {
+      return $e['enabled'] == 1;
+    });
 
     uasort($filtered, function ($a, $b) {
       if ($a['weight'] == $b['weight']) {
@@ -261,7 +262,7 @@ function dynamic_term_pages_view_save($subtask, $cache) {
         $vocabulary = taxonomy_vocabulary_machine_name_load($key);
         $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
         foreach ($terms as $term) {
-          dynamic_term_pages_pathauto_name_save($term);
+          dynamic_term_pages_pathauto_name_save($term->tid);
         }
       }
     }
