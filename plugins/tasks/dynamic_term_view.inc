@@ -261,7 +261,7 @@ function dynamic_term_pages_view_save($subtask, $cache) {
         $vocabulary = taxonomy_vocabulary_machine_name_load($key);
         $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
         foreach ($terms as $term) {
-          dynamic_term_pages_pathauto_name_save($term);
+          dynamic_term_pages_pathauto_name_save($term->tid);
         }
       }
     }
