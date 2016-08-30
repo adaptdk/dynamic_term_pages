@@ -71,7 +71,6 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
  * @param object $term
  *   The taxonomy term
  */
-
 function dynamic_term_pages_pathauto_name_save($tid) {
   $terms = array();
 
@@ -87,7 +86,7 @@ function dynamic_term_pages_pathauto_name_save($tid) {
       $terms[$lang] = new stdClass();
       $terms[$lang]->name = $field['value'];
       $terms[$lang]->tid = $tid;
-     }
+    }
   }
   else {
     // Default to standard term name field
@@ -107,12 +106,12 @@ function dynamic_term_pages_pathauto_name_save($tid) {
 
       // We use tid as a unique key, so do a on duplicate key update
       db_merge('dynamic_term_pathauto_name')
-      ->key(array('tid' => $term->tid, 'language' => $lang))
-      ->fields(array(
-        'tid' => $term->tid,
-        'pathauto_name' => dynamic_term_pages_cleanstring($term->name),
-        'language' => $lang
-      ))->execute();
+          ->key(array('tid' => $term->tid, 'language' => $lang))
+          ->fields(array(
+            'tid' => $term->tid,
+            'pathauto_name' => dynamic_term_pages_cleanstring($term->name),
+            'language' => $lang
+          ))->execute();
     }
   }
 }
@@ -122,8 +121,8 @@ function dynamic_term_pages_pathauto_name_save($tid) {
  */
 function dynamic_term_pages_taxonomy_term_load($terms) {
   $result = db_select('dynamic_term_pathauto_name', 'dtp')->fields('dtp', array('tid', 'pathauto_name', 'language'))
-            ->condition('dtp.tid', array_keys($terms), 'IN')
-            ->execute();
+      ->condition('dtp.tid', array_keys($terms), 'IN')
+      ->execute();
   foreach ($result as $record) {
     $terms[$record->tid]->pathauto_name[$record->language] = $record->pathauto_name;
   }
@@ -136,15 +135,17 @@ function dynamic_term_pages_taxonomy_term_load($terms) {
  *
  * @return $tid
  */
-function dynamic_term_pages_pathauto_name_load($name) {
-  global $language;
+function dynamic_term_pages_pathauto_name_load($name, $language = NULL) {
+  if (empty($language)) {
+    global $language;
+  }
 
   $result = db_select('dynamic_term_pathauto_name', 'dtp')
-            ->fields('dtp')
-            ->condition('pathauto_name', $name)
-            ->condition('language', $language->language)
-            ->execute()
-            ->fetchAssoc();
+      ->fields('dtp')
+      ->condition('pathauto_name', $name)
+      ->condition('language', $language->language)
+      ->execute()
+      ->fetchAssoc();
 
   if ($result) {
     return $result['tid'];
@@ -164,13 +165,13 @@ function dynamic_term_pages_pathauto_name_load($name) {
  */
 function dynamic_term_pages_name_exists($term, $lang) {
   $result = db_select('dynamic_term_pathauto_name', 'dtp')
-    ->fields('dtp', array('tid'))
-    ->condition('pathauto_name', dynamic_term_pages_cleanstring($term->name), '=')
-    ->condition('language', $lang, '=')
-    ->condition('tid', $term->tid, '!=')
-    ->range(0, 1)
-    ->execute()
-    ->fetchField();
+      ->fields('dtp', array('tid'))
+      ->condition('pathauto_name', dynamic_term_pages_cleanstring($term->name), '=')
+      ->condition('language', $lang, '=')
+      ->condition('tid', $term->tid, '!=')
+      ->range(0, 1)
+      ->execute()
+      ->fetchField();
 
   return !empty($result);
 }
@@ -207,10 +208,10 @@ function dynamic_term_pages_cleanstring($string) {
  */
 function dynamic_term_pages_url_inbound_alter(&$path, $original_path, $path_language) {
   // Allow to create menu items with "dtp/*" pattern.
-  if(isset($_POST['form_id']) && $_POST['form_id'] === 'menu_edit_item'){
+  if (isset($_POST['form_id']) && $_POST['form_id'] === 'menu_edit_item') {
     return;
-  }  
-  
+  }
+
   if (variable_get('dynamic_term_pages_view_disabled', TRUE)) {
     return;
   }
@@ -458,7 +459,14 @@ function dynamic_term_pages_term_load($slug, $vids = array(), $parents = array()
 
     $result = $query->fetchAssoc();
     if (empty($result['tid'])) {
-      return FALSE;
+
+      // If no translation or slug has Separator/Punctuation.
+      $tid = dynamic_term_pages_pathauto_name_load($slug, language_default());
+      if (empty($tid)) {
+        return FALSE;
+      }
+
+      $result = taxonomy_term_load($tid);
     }
     else {
       $result = taxonomy_term_load($result['tid']);
