@@ -61,7 +61,7 @@ function dynamic_term_pages_view_menu_alter(&$items, $task) {
   $vocabs = dynamic_term_pages_get_enabled_vocabularies();
   $i = sizeof($vocabs);
   foreach ($vocabs as $k => $vocab) {
-    $wildcards = array_fill(1, $i, '%dynamic_term_pages_term');
+    $wildcards = array_fill(1, $i, '%dtp_term');
     $args = array_keys($wildcards);
 
     // Use a custom wildcard loader so that we can send in term objects loaded by url safe name

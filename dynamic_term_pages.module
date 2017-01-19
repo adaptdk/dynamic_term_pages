@@ -313,6 +313,19 @@ function _dynamic_term_pages_get_parents() {
 }
 
 /**
+ * Wrapper around dynamic_term_pages_term_load().
+ *
+ * This function gets called when the menu loads terms through autoloading.
+ * We need a short argument since the path column in the db is limited to
+ * 255 chars.
+ *
+ * @see dynamic_term_pages_view_menu_alter()
+ */
+function dtp_term_load($slug, $vids=array(), $parents=array()) {
+  return dynamic_term_pages_term_load($slug, $vids=array(), $parents=array());
+}
+
+/**
  * Load dynamic term page term.
  *
  * We load using SQL because
