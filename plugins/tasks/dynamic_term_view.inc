@@ -254,6 +254,28 @@ function dynamic_term_pages_view_save($subtask, $cache) {
       }
     });
 
+    $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
+    $enabled = array_keys($enabled);
+    foreach ($filtered as $key => $vocab) {
+      if (!in_array($key, $enabled)) {
+        $vocabulary = taxonomy_vocabulary_machine_name_load($key);
+        $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+        foreach ($terms as $term) {
+          dynamic_term_pages_pathauto_name_save($term);
+        }
+      }
+    }
+    $filtered_keys = array_keys($filtered);
+    foreach ($enabled as $key) {
+      if (!in_array($key, $filtered_keys)) {
+        db_query("DELETE dtp
+            FROM {dynamic_term_pathauto_name} dtp
+            LEFT JOIN {taxonomy_term_data} ttd on ttd.tid = dtp.tid
+            LEFT JOIN {taxonomy_vocabulary} vocab on vocab.vid = ttd.vid
+            where vocab.machine_name = '" . $key . "'");
+      }
+    }
+
     variable_set('dynamic_term_pages_enabled_vocabularies', $filtered);
     variable_set('dynamic_term_pages_override_taxonomy_term_page', $cache->update_values['dynamic_term_pages_override_taxonomy_term_page']);
     variable_set('dynamic_term_pages_override_type', $cache->update_values['dynamic_term_pages_override_type']);

@@ -41,14 +41,20 @@ function dynamic_term_pages_ctools_plugin_directory($module, $plugin) {
  * Implements hook_taxonomy_term_insert().
  */
 function dynamic_term_pages_taxonomy_term_insert($term) {
-  dynamic_term_pages_pathauto_name_save($term);
+  $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
+  if (in_array($term->vocabulary_machine_name, array_keys($enabled))) {
+    dynamic_term_pages_pathauto_name_save($term);
+  }
 }
 
 /**
  * Implements hook_taxonomy_term_insert().
  */
 function dynamic_term_pages_taxonomy_term_update($term) {
-  dynamic_term_pages_pathauto_name_save($term);
+  $enabled = variable_get('dynamic_term_pages_enabled_vocabularies', array());
+  if (in_array($term->vocabulary_machine_name, array_keys($enabled))) {
+    dynamic_term_pages_pathauto_name_save($term);
+  }
 }
 
 /**
@@ -68,6 +74,7 @@ function dynamic_term_pages_taxonomy_term_delete($term) {
 function dynamic_term_pages_pathauto_name_save($term) {
   // First check if the alias already exists for some other term. If yes, create
   // a new alias.
+
   if (dynamic_term_pages_name_exists($term)) {
     dynamic_term_pages_name_uniquify($term);
   }
