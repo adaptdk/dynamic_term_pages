@@ -265,6 +265,7 @@ function dynamic_term_pages_view_save($subtask, $cache) {
         }
       }
     }
+    $vids = [];
     $filtered_keys = array_keys($filtered);
     foreach ($enabled as $key) {
       if (!in_array($key, $filtered_keys)) {
@@ -274,9 +275,15 @@ function dynamic_term_pages_view_save($subtask, $cache) {
             LEFT JOIN {taxonomy_vocabulary} vocab on vocab.vid = ttd.vid
             where vocab.machine_name = '" . $key . "'");
       }
+      else {
+        $vids[] = db_query("SELECT vid
+            FROM {taxonomy_vocabulary} vocab
+            WHERE vocab.machine_name = '" . $key . "'")->fetchField();
+      }
     }
 
     variable_set('dynamic_term_pages_enabled_vocabularies', $filtered);
+    variable_set('dynamic_term_pages_enabled_vocabularies_vids', $vids);
     variable_set('dynamic_term_pages_override_taxonomy_term_page', $cache->update_values['dynamic_term_pages_override_taxonomy_term_page']);
     variable_set('dynamic_term_pages_override_type', $cache->update_values['dynamic_term_pages_override_type']);
   }

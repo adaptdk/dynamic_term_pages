@@ -102,3 +102,20 @@ function dynamic_term_pages_update_7001() {
   // Run install again to get translation for existing
   dynamic_term_pages_install();
 }
+
+/**
+ * Save vocabulary ids as separate variable.
+ */
+function dynamic_term_pages_update_7002() {
+  $dtp_vocabs = variable_get('dynamic_term_pages_enabled_vocabularies', []);
+  $dtp_vocabs = array_keys($dtp_vocabs);
+  $vids = [];
+  if (!empty($dtp_vocabs)) {
+    foreach ($dtp_vocabs as $dtp_vocab) {
+      $vids[] = db_query("SELECT vid
+        FROM {taxonomy_vocabulary} vocab
+        WHERE vocab.machine_name = '" . $dtp_vocab . "'")->fetchField();
+    }
+  }
+  variable_set('dynamic_term_pages_enabled_vocabularies_vids', $vids);
+}
