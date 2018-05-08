@@ -119,3 +119,19 @@ function dynamic_term_pages_update_7002() {
   }
   variable_set('dynamic_term_pages_enabled_vocabularies_vids', $vids);
 }
+
+/**
+ * Remove non dynamic terms from dtp table.
+ */
+function dynamic_term_pages_update_7003() {
+  $filter_vocabs_vids = variable_get('dynamic_term_pages_enabled_vocabularies_vids', []);
+  if (empty($filter_vocabs_vids)) {
+    return;
+  }
+  db_query('DELETE dtp FROM dynamic_term_pathauto_name dtp
+            LEFT JOIN taxonomy_term_data ttd ON dtp.tid = ttd.tid
+            WHERE ttd.vid NOT IN (:filter_vocabs_vids)',[
+      ':filter_vocabs_vids' => array_values($filter_vocabs_vids),
+    ]
+  );
+}
