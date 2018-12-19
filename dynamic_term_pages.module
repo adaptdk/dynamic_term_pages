@@ -80,8 +80,8 @@ function dynamic_term_pages_pathauto_name_save($tid) {
   // The field where to look for translated term name. Assume the title modules name_field
   $name_field = variable_get('dynamic_term_pages_term_name_field', 'name_field');
 
-  if (is_array($term->$name_field) && !empty($term->$name_field)) {
-    foreach ($term->$name_field as $lang => $field) {
+  if (is_array($term->{$name_field}) && !empty($term->{$name_field})) {
+    foreach ($term->{$name_field} as $lang => $field) {
       $field = reset($field);
       $terms[$lang] = new stdClass();
       $terms[$lang]->name = $field['value'];
